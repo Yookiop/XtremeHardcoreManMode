@@ -61,7 +61,6 @@ public class XHCMPlugin extends Plugin
     @Override
     protected void startUp() throws Exception
     {
-		log.info("XHCM Plugin started!");
 		aliveIcon = loadIcon("/icon_alive.png");
 		deadIcon = loadIcon("/icon_dead.png");
 
@@ -76,7 +75,6 @@ public class XHCMPlugin extends Plugin
     @Override
     protected void shutDown() throws Exception
     {
-        log.info("XHCM Plugin stopped!");
     }
 
     @Subscribe
@@ -122,7 +120,6 @@ public class XHCMPlugin extends Plugin
 			InputStream inputStream = getClass().getResourceAsStream("/" + imageName);
 			if (inputStream == null)
 			{
-				log.error("Image not found: " + imageName);
 				return null;
 			}
 			
@@ -131,7 +128,6 @@ public class XHCMPlugin extends Plugin
 		}
 		catch (IOException e)
 		{
-			log.error("Failed to load image: " + imageName, e);
 			return null;
 		}
 	}	
@@ -149,12 +145,10 @@ public class XHCMPlugin extends Plugin
             if (currentlyDead && !playerIsDead)
             {
                 playerIsDead = true;
-                log.info("Player is dead! Xtreme Hardcore Mode failed.");
             }
             else if (!currentlyDead && playerIsDead)
             {
                 playerIsDead = false;
-                log.info("Player is alive!");
             }
         }
     }
@@ -167,7 +161,6 @@ public class XHCMPlugin extends Plugin
         }
         catch (IOException e)
         {
-            log.error("Failed to load icon: " + iconPath, e);
             return null;
         }
     }
