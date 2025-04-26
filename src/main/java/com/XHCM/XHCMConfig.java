@@ -16,4 +16,14 @@ public interface XHCMConfig extends Config
 	{
 		return "Hello";
 	}
+
+	@ConfigItem(
+    keyName = "showXHCMIcon",
+    name = "Show XHCM Icon",
+    description = "Toggles the XHCM icon next to your name in chat"
+	)
+	default boolean showXHCMIcon()
+	{
+    	return true;
+	}
 }
