@@ -1,4 +1,4 @@
-package com.example;
+package com.XHCM;
 
 import com.google.inject.Provides;
 import javax.inject.Inject;
@@ -14,15 +14,17 @@ import net.runelite.client.plugins.PluginDescriptor;
 
 @Slf4j
 @PluginDescriptor(
-	name = "Example"
+	name = "XtremeHardcoreMan",
+	description = "No ironman restrictions, but you have 1 life and there are no safe deaths (account won't be deleted)."
+
 )
-public class ExamplePlugin extends Plugin
+public class XHCMPlugin extends Plugin
 {
 	@Inject
 	private Client client;
 
 	@Inject
-	private ExampleConfig config;
+	private XHCMConfig config;
 
 	@Override
 	protected void startUp() throws Exception
@@ -46,8 +48,8 @@ public class ExamplePlugin extends Plugin
 	}
 
 	@Provides
-	ExampleConfig provideConfig(ConfigManager configManager)
+	XHCMConfig provideConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(ExampleConfig.class);
+		return configManager.getConfig(XHCMConfig.class);
 	}
 }

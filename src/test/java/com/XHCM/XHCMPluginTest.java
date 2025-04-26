@@ -1,13 +1,15 @@
-package com.example;
+package com.XHCM;
+
+import com.XHCM.XHCMPlugin;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
 
-public class ExamplePluginTest
+public class XHCMPluginTest
 {
 	public static void main(String[] args) throws Exception
 	{
-		ExternalPluginManager.loadBuiltin(ExamplePlugin.class);
+		ExternalPluginManager.loadBuiltin(XHCMPlugin.class);
 		RuneLite.main(args);
 	}
 }
