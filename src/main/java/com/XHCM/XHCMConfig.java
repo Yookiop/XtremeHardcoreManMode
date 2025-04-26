@@ -7,23 +7,13 @@ import net.runelite.client.config.ConfigItem;
 @ConfigGroup("example")
 public interface XHCMConfig extends Config
 {
-	@ConfigItem(
-		keyName = "greeting",
-		name = "Welcome Greeting",
-		description = "The message to show to the user when they login"
-	)
-	default String greeting()
-	{
-		return "Hello";
-	}
-
-	@ConfigItem(
-    keyName = "showXHCMIcon",
-    name = "Show XHCM Icon",
-    description = "Toggles the XHCM icon next to your name in chat"
-	)
-	default boolean showXHCMIcon()
-	{
-    	return true;
-	}
+	//@ConfigItem(
+    //keyName = "showXHCMIcon",
+    //name = "Show XHCM Icon",
+    //description = "Toggles the XHCM icon next to your name in chat"
+	//)
+	//default boolean showXHCMIcon()
+	//{
+    // 	return true;
+	//}
 }
