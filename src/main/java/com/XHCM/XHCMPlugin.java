@@ -150,13 +150,11 @@ public class XHCMPlugin extends Plugin
             {
                 playerIsDead = true;
                 log.info("Player is dead! Xtreme Hardcore Mode failed.");
-                updateOverlay(); // Update de overlay bij dood
             }
             else if (!currentlyDead && playerIsDead)
             {
                 playerIsDead = false;
                 log.info("Player is alive!");
-                updateOverlay(); // Update de overlay bij levend
             }
         }
     }
