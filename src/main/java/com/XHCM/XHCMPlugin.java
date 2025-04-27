@@ -104,8 +104,8 @@ public class XHCMPlugin extends Plugin
         clientThread.invoke(() -> {
             try {
                 // Load images
-                BufferedImage aliveIconImage = ImageUtil.loadImageResource(getClass(), "/com/XHCM/icon_alive.png");
-                BufferedImage deadIconImage = ImageUtil.loadImageResource(getClass(), "/com/XHCM/icon_dead.png");
+                BufferedImage aliveIconImage = ImageUtil.loadImageResource(XHCMPlugin.class, "/com/XHCM/icon_alive.png");
+                BufferedImage deadIconImage = ImageUtil.loadImageResource(XHCMPlugin.class, "/com/XHCM/icon_dead.png");
 
                 if (aliveIconImage == null) {
                     log.error("Failed to load alive icon");
