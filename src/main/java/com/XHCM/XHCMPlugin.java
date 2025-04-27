@@ -32,22 +32,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.io.InputStream;
 
-import com.google.inject.Provides;
-import net.runelite.api.Client;
-import net.runelite.api.events.ChatMessage;
-import net.runelite.api.events.GameTick;
-import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.plugins.Plugin;
-import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.util.Text;
-import net.runelite.client.config.ConfigManager;
-import javax.inject.Inject;
-
-
 @Slf4j
 @PluginDescriptor(
-        name = "XtremeHardcoreMan",
-        description = "No ironman restrictions, but you have 1 life and there are no safe deaths (account won't be deleted)."
+    name = "XtremeHardcoreMan",
+    description = "No ironman restrictions, but you have 1 life and there are no safe deaths (account won't be deleted)."
 )
 public class XHCMPlugin extends Plugin
 {
@@ -64,26 +52,16 @@ public class XHCMPlugin extends Plugin
     private XHCMOverlay xhcmOverlay;
 
     @Inject
-    private ConfigManager configManager;
-
-    @Inject
     private XHCMConfig config;
-
-    @Provides
-    XHCMConfig getConfig()
-    {
-        return configManager.getConfig(XHCMConfig.class);
-    }
 
     private int aliveIconOffset;
     private int deadIconOffset;
     private boolean playerIsDead = false;
     private boolean firstRun = true;
-    //private boolean isPlayerPermanentlyDead = false;
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
     //public static final int REST_IN_PEACE_VARBIT_ID = 4394;
-    //public static final String DEATHS_DOMAIN_ENTRY = "Enter Death's Domain";
+    public static final String DEATHS_DOMAIN_ENTRY = "Enter Death's Domain";
 
     private BufferedImage aliveIcon;
     private BufferedImage deadIcon;
@@ -91,8 +69,8 @@ public class XHCMPlugin extends Plugin
     @Override
     protected void startUp() throws Exception
     {
-        aliveIcon = loadIcon("/icon_alive.png");
-        deadIcon = loadIcon("/icon_dead.png");
+		aliveIcon = loadIcon("/icon_alive.png");
+		deadIcon = loadIcon("/icon_dead.png");
         overlayManager.add(xhcmOverlay);
 
         if (firstRun)
@@ -114,29 +92,9 @@ public class XHCMPlugin extends Plugin
     {
         if (gameStateChanged.getGameState() == GameState.LOGGED_IN)
         {
-            executorService.scheduleAtFixedRate(this::checkForDeath, 10, 1, TimeUnit.SECONDS);
+            executorService.scheduleAtFixedRate(this::checkForDeath, 0, 1, TimeUnit.SECONDS);
         }
     }
-
-    @Subscribe
-    public void onGameTick(GameTick tick)
-    {
-        // Bij elke tick controleren we of de speler dood is en slaan we dat op
-        updatePermanentDeathStatus();
-    }
-
-    private void updatePermanentDeathStatus()
-    {
-        // Gebruik de originele check om te bepalen of de speler dood is
-        boolean isDead = isPlayerDead();
-
-        // Als de status verandert, sla het dan op in de configuratie
-        if (config.permanentDeath() != isDead)
-        {
-            config.permanentDeath(isDead); // Zet permanentDeath status in config
-        }
-    }
-
 
     @Subscribe
     public void onMenuOptionClicked(MenuOptionClicked event)
@@ -150,25 +108,25 @@ public class XHCMPlugin extends Plugin
         }
     }
 
-    public BufferedImage loadImage(String imageName)
-    {
-        try
-        {
-            // Get the image from resources (e.g., inside resources folder or plugin directory)
-            InputStream inputStream = getClass().getResourceAsStream("/" + imageName);
-            if (inputStream == null)
-            {
-                return null;
-            }
+	public BufferedImage loadImage(String imageName)
+	{
+		try
+		{
+			// Get the image from resources (e.g., inside resources folder or plugin directory)
+			InputStream inputStream = getClass().getResourceAsStream("/" + imageName);
+			if (inputStream == null)
+			{
+				return null;
+			}
 
-            // Read the image and return it
-            return ImageIO.read(inputStream);
-        }
-        catch (IOException e)
-        {
-            return null;
-        }
-    }
+			// Read the image and return it
+			return ImageIO.read(inputStream);
+		}
+		catch (IOException e)
+		{
+			return null;
+		}
+	}
 
     private void checkForDeath()
     {
@@ -176,37 +134,47 @@ public class XHCMPlugin extends Plugin
         if (client.getGameState() == GameState.LOGGED_IN)
         {
             //log.info("Attempting to fetch Rest In Peace Varbit value...");
-            // int restInPeaceValue = client.getVarbitValue(REST_IN_PEACE_VARBIT_ID);
-            // log.info("Fetched Rest In Peace Varbit value: {}", restInPeaceValue);
+           // int restInPeaceValue = client.getVarbitValue(REST_IN_PEACE_VARBIT_ID);
+           // log.info("Fetched Rest In Peace Varbit value: {}", restInPeaceValue);
 
-            // boolean isRestInPeaceUnlocked = client.getVarbitValue(REST_IN_PEACE_VARBIT_ID) == 1;
+           // boolean isRestInPeaceUnlocked = client.getVarbitValue(REST_IN_PEACE_VARBIT_ID) == 1;
             client.getBoostedSkillLevel(Skill.HITPOINTS);
             try {
-                Thread.sleep(500);  // extra refresh HP
+                Thread.sleep(500);  // Wacht 500 ms voor een kleine vertraging
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            client.getBoostedSkillLevel(Skill.HITPOINTS);
-            int currentHP = client.getBoostedSkillLevel(Skill.HITPOINTS);
 
-            //boolean currentlyDead = isRestInPeaceUnlocked || currentHP <= 0;
+            int currentHP = client.getBoostedSkillLevel(Skill.HITPOINTS);
             boolean currentlyDead = currentHP <= 0;
-            // log.info("isRestInPeaceUnlocked: {}", client.getVarbitValue(REST_IN_PEACE_VARBIT_ID) == 1);
+           // log.info("isRestInPeaceUnlocked: {}", client.getVarbitValue(REST_IN_PEACE_VARBIT_ID) == 1);
             log.info("currentHP: {}", client.getBoostedSkillLevel(Skill.HITPOINTS));
 
-            if (currentlyDead && !XHCMConfig.permanentDeath()) {
-                XHCMConfig.setPermanentDeath(true);
-                log.info("Player is permanently dead!");
-                ChatMessageBuilder message = new ChatMessageBuilder()
-                        .append(Color.RED, "Xtreme Hardcore mode: You have permanently died. No second chances!");
-                client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", message.build(), null);
-            } else if (!currentlyDead && XHCMConfig.permanentDeath()) {
-                log.info("Player is permanently dead, cannot reset to alive.");
-            } else if (!currentlyDead && !XHCMConfig.permanentDeath()) {
-                log.info("Player is alive.");
+
+            if (currentlyDead && !playerIsDead)
+            {
+                playerIsDead = true;
+                log.info("Player is dead: {}", currentlyDead);
+                log.info("currentHP: {}", currentHP);
+            }
+            else if (currentlyDead && playerIsDead)
+            {
+                log.info("Player is dead: {}", currentlyDead);
+                log.info("currentHP: {}", currentHP);
+            }
+            else if (!currentlyDead && playerIsDead)//in case of incorrect value of playerIsDead, this else if sets the value to false
+            {
+                playerIsDead = false;
+                log.info("Player is dead: {}", currentlyDead);
+                log.info("currentHP: {}", currentHP);
+            }
+            else if (!currentlyDead && !playerIsDead)
+            {
+                log.info("Player is dead: {}", currentlyDead);
                 log.info("currentHP: {}", currentHP);
             }
         }
+
     }
 
     private BufferedImage loadIcon(String iconPath)
@@ -221,20 +189,20 @@ public class XHCMPlugin extends Plugin
         }
     }
 
-    public boolean isPlayerDead()
-    {
-        return playerIsDead;
-    }
+	public boolean isPlayerDead()
+	{
+    	return playerIsDead;
+	}
 
-    public BufferedImage getAliveIcon()
-    {
-        return aliveIcon;
-    }
+	public BufferedImage getAliveIcon()
+	{
+    	return aliveIcon;
+	}
 
-    public BufferedImage getDeadIcon()
-    {
-        return deadIcon;
-    }
+	public BufferedImage getDeadIcon()
+	{
+    	return deadIcon;
+	}
 
 
     @Provides
