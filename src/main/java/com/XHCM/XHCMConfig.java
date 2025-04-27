@@ -14,7 +14,7 @@ public interface XHCMConfig extends Config
     )
     default boolean permanentDeath()
     {
-        return false; // Initial default, you may modify this according to your death check logic
+        return false;
     }
 
     @ConfigItem(
