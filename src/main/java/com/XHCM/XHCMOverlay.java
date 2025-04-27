@@ -43,6 +43,7 @@ public class XHCMOverlay extends Overlay
         setLayer(OverlayLayer.ABOVE_WIDGETS);
     }
 
+
     @Override
 	public Dimension render(Graphics2D graphics)
 	{
@@ -50,32 +51,32 @@ public class XHCMOverlay extends Overlay
 		{
 			return null;
 		}
-	
+
 		Player player = client.getLocalPlayer();
 		if (player == null)
 		{
 			return null;
 		}
-	
+
 		LocalPoint localLocation = player.getLocalLocation();
 		net.runelite.api.Point canvasPoint = Perspective.localToCanvas(client, localLocation, client.getPlane());
-	
+
 		if (canvasPoint == null)
 		{
 			return null;
 		}
-	
+
 		BufferedImage icon = plugin.isPlayerDead() ? plugin.getDeadIcon() : plugin.getAliveIcon();
 		if (icon == null)
 		{
 			return null;
 		}
-	
+
 		int x = canvasPoint.getX() - icon.getWidth() / 2;
 		int y = canvasPoint.getY() - icon.getHeight() - 10;
-	
+
 		graphics.drawImage(icon, x, y, null);
-	
+
 		return null;
 	}
 
