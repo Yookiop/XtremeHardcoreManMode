@@ -17,6 +17,7 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.menus.MenuManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import net.runelite.api.events.ChatMessage;
@@ -53,17 +54,28 @@ public class XHCMPlugin extends Plugin
     @Inject
     private ClientThread clientThread;
 
+    @Inject
+    private OverlayManager overlayManager;
+
+    @Inject
+    private XHCMOverlay overlay;
+
     private HashMap<XHCMIcons, Integer> iconIds = new HashMap<>();
     private boolean firstRun = true;
     private BufferedImage cachedAliveIcon = null;
     private BufferedImage cachedDeadIcon = null;
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     private XHCMIcons currentIcon = XHCMIcons.ALIVE;
+    private int tickCounter = 0;
+    private static final int TICKS_PER_HOUR = 6000; // 6000 ticks = 1 hour (100 ticks/min * 60 min)
 
     @Override
     protected void startUp() throws Exception
     {
         log.info("XHCM plugin starting up...");
+
+        // Register the overlay
+        overlayManager.add(overlay);
 
         if (client.getGameState() == GameState.LOGGED_IN)
         {
@@ -88,6 +100,7 @@ public class XHCMPlugin extends Plugin
     protected void shutDown() throws Exception
     {
         log.info("XHCM plugin shutting down...");
+        overlayManager.remove(overlay);
         executorService.shutdown();
         iconIds.clear();
         clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
@@ -185,6 +198,28 @@ public class XHCMPlugin extends Plugin
         return config.permanentDeath();
     }
 
+    /**
+     * Checks if the plugin should be enabled for the current player
+     * @return true if the plugin should be enabled, false otherwise
+     */
+    public boolean isPluginEnabled()
+    {
+        if (client.getLocalPlayer() == null) {
+            return false;
+        }
+
+        String configUsername = config.username();
+        String playerUsername = client.getLocalPlayer().getName();
+
+        // If no username is set in config, the plugin is enabled for all accounts
+        if (configUsername == null || configUsername.trim().isEmpty()) {
+            return true;
+        }
+
+        // Otherwise, the plugin is only enabled if the username matches
+        return Text.standardize(configUsername).equalsIgnoreCase(Text.standardize(playerUsername));
+    }
+
     @Subscribe
     public void onGameStateChanged(GameStateChanged gameStateChanged)
     {
@@ -198,6 +233,11 @@ public class XHCMPlugin extends Plugin
                     log.info("First run actions...");
                     firstRun = false;
                 }
+
+                // Initialize or update the last time updated if needed
+                if (config.lastTimeUpdated() == 0) {
+                    config.lastTimeUpdated(System.currentTimeMillis());
+                }
             });
         }
     }
@@ -205,6 +245,11 @@ public class XHCMPlugin extends Plugin
     @Subscribe
     public void onGameTick(GameTick tick)
     {
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+
         checkForDeath();
 
         // If icons aren't loaded yet, try loading them
@@ -212,11 +257,29 @@ public class XHCMPlugin extends Plugin
             log.info("Icons not loaded yet, trying to load at game tick");
             loadIcons();
         }
+
+        // Increment tick counter if player is alive
+        if (!isPlayerDead() && client.getGameState() == GameState.LOGGED_IN) {
+            tickCounter++;
+
+            // If we've reached an hour's worth of ticks
+            if (tickCounter >= TICKS_PER_HOUR) {
+                int currentHours = config.timeAliveHours();
+                config.timeAliveHours(currentHours + 1);
+                tickCounter = 0;
+                log.debug("Time alive incremented to {} hours", config.timeAliveHours());
+            }
+        }
     }
 
     @Subscribe
     public void onChatMessage(ChatMessage event)
     {
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+
         if (event.getType() != ChatMessageType.PUBLICCHAT &&
                 event.getType() != ChatMessageType.PRIVATECHAT &&
                 event.getType() != ChatMessageType.MODCHAT &&
@@ -262,6 +325,11 @@ public class XHCMPlugin extends Plugin
     @Subscribe
     public void onScriptCallbackEvent(ScriptCallbackEvent event)
     {
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+
         if (!event.getEventName().equals("setChatboxInput"))
         {
             return;
@@ -273,12 +341,22 @@ public class XHCMPlugin extends Plugin
     @Subscribe
     public void onBeforeRender(BeforeRender event)
     {
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+
         updateChatbox(); // this stops flickering when typing
     }
 
     @Subscribe
     public void onMenuOptionClicked(MenuOptionClicked event)
     {
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+
         if (event.getMenuOption().equalsIgnoreCase("Enter Death's Domain"))
         {
             event.consume();
@@ -288,6 +366,11 @@ public class XHCMPlugin extends Plugin
 
     private void updateChatbox()
     {
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+
         Widget chatboxTypedText = client.getWidget(WidgetInfo.CHATBOX_INPUT);
 
         if (chatboxTypedText == null || chatboxTypedText.isHidden())
@@ -324,10 +407,18 @@ public class XHCMPlugin extends Plugin
 
     private void checkForDeath()
     {
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+
         if (client.getGameState() == GameState.LOGGED_IN)
         {
             int currentHP = client.getBoostedSkillLevel(Skill.HITPOINTS);
             boolean currentlyDead = currentHP <= 0;
+
+            log.info("currentHP: {}", client.getBoostedSkillLevel(Skill.HITPOINTS));
+            log.info("PermanentDeath: {}", config.permanentDeath());
 
             // If player is dead and this hasn't been saved as permanent yet
             if (currentlyDead && !config.permanentDeath())
