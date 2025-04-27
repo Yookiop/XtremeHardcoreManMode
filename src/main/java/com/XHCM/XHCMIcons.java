@@ -7,8 +7,8 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum XHCMIcons
 {
-    ALIVE("Alive", "com/XHCM/icon_alive.png"),
-    DEAD("Dead", "com/XHCM/icon_dead.png");
+    ALIVE("Alive", "/com/XHCM/icon_alive.png"),
+    DEAD("Dead", "/com/XHCM/icon_dead.png");
 
     private final String name;
     private final String imagePath;
