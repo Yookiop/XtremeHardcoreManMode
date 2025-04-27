@@ -32,23 +32,46 @@ public class XHCMOverlay extends OverlayPanel
     @Override
     public Dimension render(Graphics2D graphics)
     {
-        if (!config.showTimeAlive() || plugin.isPlayerDead() || !plugin.isPluginEnabled())
+        if (!config.showTimeAlive() || !plugin.isPluginEnabled())
         {
             return null;
         }
 
-        int timeAliveHours = config.timeAliveHours();
-        String hourText = timeAliveHours + " hour" + (timeAliveHours != 1 ? "s" : "");
-
         // Clear previous components
         panelComponent.getChildren().clear();
 
-        // Add single line with both label and value
-        panelComponent.getChildren().add(LineComponent.builder()
-                .left("Time alive:")
-                .right(hourText)
-                .leftColor(Color.GREEN)
-                .build());
+        if (plugin.isPlayerDead())
+        {
+            // Show "DEAD" message when player is dead
+            panelComponent.getChildren().add(LineComponent.builder()
+                    .left("Status:")
+                    .right("DEAD")
+                    .rightColor(Color.RED)
+                    .build());
+        }
+        else
+        {
+            // Show time alive for living players
+            int timeAliveHours = config.timeAliveHours();
+            String hourText;
+
+            // Show "<1 hour" when time alive is less than 1 hour
+            if (timeAliveHours == 0)
+            {
+                hourText = "<1 hour";
+            }
+            else
+            {
+                hourText = timeAliveHours + " hour" + (timeAliveHours != 1 ? "s" : "");
+            }
+
+            // Add time alive line
+            panelComponent.getChildren().add(LineComponent.builder()
+                    .left("Time alive:")
+                    .right(hourText)
+                    .leftColor(Color.GREEN)
+                    .build());
+        }
 
         return super.render(graphics);
     }
