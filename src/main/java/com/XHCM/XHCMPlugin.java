@@ -249,9 +249,7 @@ public class XHCMPlugin extends Plugin
         if (!isPluginEnabled()) {
             return;
         }
-
         checkForDeath();
-
         // If icons aren't loaded yet, try loading them
         if (!areIconsLoaded() && client.getGameState() == GameState.LOGGED_IN) {
             log.info("Icons not loaded yet, trying to load at game tick");
