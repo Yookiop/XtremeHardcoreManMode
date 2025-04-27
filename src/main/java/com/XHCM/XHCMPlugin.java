@@ -329,9 +329,6 @@ public class XHCMPlugin extends Plugin
             int currentHP = client.getBoostedSkillLevel(Skill.HITPOINTS);
             boolean currentlyDead = currentHP <= 0;
 
-            log.info("currentHP: {}", client.getBoostedSkillLevel(Skill.HITPOINTS));
-            log.info("PermanentDeath: {}", config.permanentDeath());
-
             // If player is dead and this hasn't been saved as permanent yet
             if (currentlyDead && !config.permanentDeath())
             {
@@ -356,8 +353,6 @@ public class XHCMPlugin extends Plugin
             }
             else if (!currentlyDead && !config.permanentDeath())
             {
-                log.info("Player is alive.");
-                log.info("currentHP: {}", currentHP);
             }
         }
     }
