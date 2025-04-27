@@ -14,7 +14,7 @@ public interface XHCMConfig extends Config
             keyName = "permanentDeath",
             name = "Permanent Death Status",
             description = "Sets the permanent death status (DO NOT MODIFY)",
-            hidden = false  // This hides it from the configuration UI
+            hidden = false  // TODO: Make hidden = true
     )
     default boolean permanentDeath()
     {
@@ -76,8 +76,8 @@ public interface XHCMConfig extends Config
 
     @ConfigItem(
             keyName = "username",
-            name = "Fill in your in-game username",
-            description = "The plugin will only work if this matches your in-game username (leave empty to work for any account)",
+            name = "Fill in your in-game username below:",
+            description = "Fill in your in-game username to make this plugin work for that account specifically (leave empty to work for any account)",
             position = 0
     )
     default String username()

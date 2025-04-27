@@ -3,8 +3,6 @@ package com.XHCM;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
-import java.awt.Point;
-import java.awt.Rectangle;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -12,7 +10,6 @@ import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayPriority;
 import net.runelite.client.ui.overlay.components.LineComponent;
-import net.runelite.client.ui.overlay.components.TitleComponent;
 
 public class XHCMOverlay extends OverlayPanel
 {
@@ -43,19 +40,14 @@ public class XHCMOverlay extends OverlayPanel
         int timeAliveHours = config.timeAliveHours();
         String hourText = timeAliveHours + " hour" + (timeAliveHours != 1 ? "s" : "");
 
-        // Build overlay components
+        // Clear previous components
         panelComponent.getChildren().clear();
 
-        // Add title
-        panelComponent.getChildren().add(TitleComponent.builder()
-                .text("Time Alive")
-                .color(Color.GREEN)
-                .build());
-
-        // Add time counter
+        // Add single line with both label and value
         panelComponent.getChildren().add(LineComponent.builder()
-                .left("")
+                .left("Time Alive:")
                 .right(hourText)
+                .leftColor(Color.GREEN)
                 .build());
 
         return super.render(graphics);
