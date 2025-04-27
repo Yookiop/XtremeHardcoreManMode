@@ -13,7 +13,7 @@ public interface XHCMConfig extends Config
             keyName = "permanentDeath",
             name = "Permanent Death Status",
             description = "Sets the permanent death status (DO NOT MODIFY)",
-            hidden = false  // This hides it from the configuration UI
+            hidden = true  // This hides it from the configuration UI
     )
     default boolean permanentDeath()
     {
