@@ -26,6 +26,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -52,17 +53,20 @@ public class XHCMPlugin extends Plugin
     @Inject
     private ClientThread clientThread;
 
-    private int aliveIconId = -1;
-    private int deadIconId = -1;
+    private HashMap<XHCMIcons, Integer> iconIds = new HashMap<>();
     private boolean firstRun = true;
     private BufferedImage cachedAliveIcon = null;
     private BufferedImage cachedDeadIcon = null;
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+    private XHCMIcons currentIcon = XHCMIcons.ALIVE;
 
     @Override
     protected void startUp() throws Exception
     {
-        loadIcons();
+        if (client.getGameState() == GameState.LOGGED_IN)
+        {
+            loadIcons();
+        }
 
         if (firstRun)
         {
@@ -78,7 +82,7 @@ public class XHCMPlugin extends Plugin
     protected void shutDown() throws Exception
     {
         executorService.shutdown();
-
+        iconIds.clear();
         clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
     }
 
@@ -97,55 +101,58 @@ public class XHCMPlugin extends Plugin
             return;
         }
 
-        try {
-            BufferedImage aliveIconImage = ImageUtil.loadImageResource(XHCMPlugin.class, "/com/XHCM/icon_alive.png");
-            BufferedImage deadIconImage = ImageUtil.loadImageResource(XHCMPlugin.class, "/com/XHCM/icon_dead.png");
+        clientThread.invoke(() -> {
+            try {
+                // Load images
+                BufferedImage aliveIconImage = ImageUtil.loadImageResource(getClass(), "/com/XHCM/icon_alive.png");
+                BufferedImage deadIconImage = ImageUtil.loadImageResource(getClass(), "/com/XHCM/icon_dead.png");
 
-            if (aliveIconImage == null) {
-                log.error("Failed to load alive icon");
-            } else {
-                log.info("Successfully loaded alive icon");
-                cachedAliveIcon = aliveIconImage;
+                if (aliveIconImage == null) {
+                    log.error("Failed to load alive icon");
+                    return;
+                } else {
+                    log.info("Successfully loaded alive icon");
+                    cachedAliveIcon = aliveIconImage;
+                }
+
+                if (deadIconImage == null) {
+                    log.error("Failed to load dead icon");
+                    return;
+                } else {
+                    log.info("Successfully loaded dead icon");
+                    cachedDeadIcon = deadIconImage;
+                }
+
+                // Get existing mod icons
+                IndexedSprite[] modIcons = client.getModIcons();
+
+                // Create new indexed sprites for our icons
+                IndexedSprite aliveSprite = ImageUtil.getImageIndexedSprite(aliveIconImage, client);
+                IndexedSprite deadSprite = ImageUtil.getImageIndexedSprite(deadIconImage, client);
+
+                // Create a new array including our new icons
+                IndexedSprite[] newModIcons = Arrays.copyOf(modIcons, modIcons.length + 2);
+
+                // Add our icons to the end of the array
+                int aliveIconId = modIcons.length;
+                int deadIconId = modIcons.length + 1;
+
+                newModIcons[aliveIconId] = aliveSprite;
+                newModIcons[deadIconId] = deadSprite;
+
+                // Store the icon IDs
+                iconIds.put(XHCMIcons.ALIVE, aliveIconId);
+                iconIds.put(XHCMIcons.DEAD, deadIconId);
+
+                // Set the new mod icons array
+                client.setModIcons(newModIcons);
+
+                log.info("Icons loaded - Alive ID: {}, Dead ID: {}", aliveIconId, deadIconId);
+            } catch (Exception e) {
+                log.error("Error loading icons", e);
+
             }
-
-            if (deadIconImage == null) {
-                log.error("Failed to load dead icon");
-            } else {
-                log.info("Successfully loaded dead icon");
-                cachedDeadIcon = deadIconImage;
-            }
-
-            IndexedSprite[] modIcons = client.getModIcons();
-            IndexedSprite[] newModIcons = Arrays.copyOf(modIcons, modIcons.length + 2);
-
-            aliveIconId = modIcons.length;
-            deadIconId = modIcons.length + 1;
-
-            newModIcons[aliveIconId] = ImageUtil.getImageIndexedSprite(aliveIconImage, client);
-            newModIcons[deadIconId] = ImageUtil.getImageIndexedSprite(deadIconImage, client);
-
-            client.setModIcons(newModIcons);
-        } catch (Exception e) {
-            log.error("Error loading icons", e);
-        }
-    }
-
-    public BufferedImage getAliveIcon()
-    {
-        if (cachedAliveIcon == null) {
-            cachedAliveIcon = ImageUtil.loadImageResource(XHCMPlugin.class, "com/XHCM/icon_alive.png");
-            log.debug("Loaded alive icon from resources");
-        }
-        return cachedAliveIcon;
-    }
-
-    public BufferedImage getDeadIcon()
-    {
-        if (cachedDeadIcon == null) {
-            cachedDeadIcon = ImageUtil.loadImageResource(XHCMPlugin.class, "com/XHCM/icon_dead.png");
-            log.debug("Loaded dead icon from resources");
-        }
-        return cachedDeadIcon;
+        });
     }
 
     public boolean isPlayerDead()
@@ -193,10 +200,14 @@ public class XHCMPlugin extends Plugin
 
         if (isLocalPlayer)
         {
-            int iconToUse = isPlayerDead() ? deadIconId : aliveIconId;
-            log.debug("Setting chat name with icon {} for player {}", iconToUse, event.getName());
-            event.getMessageNode().setName(
-                    getImgTag(iconToUse) + Text.removeTags(event.getName()));
+            currentIcon = isPlayerDead() ? XHCMIcons.DEAD : XHCMIcons.ALIVE;
+            int iconToUse = iconIds.getOrDefault(currentIcon, -1);
+
+            if (iconToUse != -1) {
+                log.debug("Setting chat name with icon {} for player {}", iconToUse, event.getName());
+                event.getMessageNode().setName(
+                        getImgTag(iconToUse) + Text.removeTags(event.getName()));
+            }
         }
     }
 
@@ -231,11 +242,6 @@ public class XHCMPlugin extends Plugin
     {
         Widget chatboxTypedText = client.getWidget(WidgetInfo.CHATBOX_INPUT);
 
-        if (aliveIconId == -1 || deadIconId == -1)
-        {
-            return;
-        }
-
         if (chatboxTypedText == null || chatboxTypedText.isHidden())
         {
             return;
@@ -244,8 +250,10 @@ public class XHCMPlugin extends Plugin
         String[] chatbox = chatboxTypedText.getText().split(":", 2);
         String rsn = Objects.requireNonNull(client.getLocalPlayer()).getName();
 
-        chatboxTypedText.setText(getImgTag(isPlayerDead() ? deadIconId : aliveIconId)
-                + Text.removeTags(rsn) + ":" + chatbox[1]);
+        int iconToUse = iconIds.getOrDefault(isPlayerDead() ? XHCMIcons.DEAD : XHCMIcons.ALIVE, -1);
+        if (iconToUse != -1) {
+            chatboxTypedText.setText(getImgTag(iconToUse) + Text.removeTags(rsn) + ":" + chatbox[1]);
+        }
     }
 
     private String getImgTag(int iconIndex)
