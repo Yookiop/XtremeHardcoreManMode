@@ -45,7 +45,7 @@ public class XHCMOverlay extends OverlayPanel
 
         // Add single line with both label and value
         panelComponent.getChildren().add(LineComponent.builder()
-                .left("Time Alive:")
+                .left("Time alive:")
                 .right(hourText)
                 .leftColor(Color.GREEN)
                 .build());

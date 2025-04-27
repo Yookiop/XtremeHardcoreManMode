@@ -30,7 +30,7 @@ public interface XHCMConfig extends Config
 
     @ConfigItem(
             keyName = "showTimeAlive",
-            name = "Show Time Alive Counter",
+            name = "Show time alive counter",
             description = "Displays a counter showing how long your character has been alive in hours"
     )
     default boolean showTimeAlive()
