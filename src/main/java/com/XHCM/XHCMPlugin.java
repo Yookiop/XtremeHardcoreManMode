@@ -21,8 +21,12 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.ui.overlay.components.PanelComponent;
 
 import javax.inject.Inject;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
@@ -60,6 +64,9 @@ public class XHCMPlugin extends Plugin
     @Inject
     private XHCMOverlay overlay;
 
+    @Inject
+    private ClientToolbar clientToolbar;
+
     private HashMap<XHCMIcons, Integer> iconIds = new HashMap<>();
     private boolean firstRun = true;
     private BufferedImage cachedAliveIcon = null;
@@ -68,6 +75,9 @@ public class XHCMPlugin extends Plugin
     private XHCMIcons currentIcon = XHCMIcons.ALIVE;
     private int tickCounter = 0;
     private static final int TICKS_PER_HOUR = 6000; // 6000 ticks = 1 hour (100 ticks/min * 60 min)
+    private boolean usernamePopupShown = false;
+    private NavigationButton navButton;
+    private JFrame usernamePopupFrame;
 
     @Override
     protected void startUp() throws Exception
@@ -83,6 +93,9 @@ public class XHCMPlugin extends Plugin
             clientThread.invokeLater(() -> {
                 log.info("Client is logged in, loading icons...");
                 loadIcons();
+
+                // Show username popup if needed
+                checkAndDisplayUsernamePopup();
             });
         }
 
@@ -103,6 +116,7 @@ public class XHCMPlugin extends Plugin
         overlayManager.remove(overlay);
         executorService.shutdown();
         iconIds.clear();
+        closeUsernamePopup();
         clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
     }
 
@@ -114,6 +128,98 @@ public class XHCMPlugin extends Plugin
 
     private boolean areIconsLoaded() {
         return iconIds.containsKey(XHCMIcons.ALIVE) && iconIds.containsKey(XHCMIcons.DEAD);
+    }
+
+    /**
+     * Check if username is set and display popup if not
+     */
+    private void checkAndDisplayUsernamePopup() {
+        if (isUsernameEmpty() && !usernamePopupShown && client.getGameState() == GameState.LOGGED_IN) {
+            // Schedule on client thread to avoid Swing threading issues
+            SwingUtilities.invokeLater(this::showUsernamePopup);
+        }
+    }
+
+    /**
+     * Show a popup window asking for username
+     */
+    private void showUsernamePopup() {
+        if (usernamePopupFrame != null) {
+            return;
+        }
+
+        usernamePopupShown = true;
+        usernamePopupFrame = new JFrame("XHCM Plugin - Username Required");
+        usernamePopupFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        usernamePopupFrame.setSize(400, 250);
+        usernamePopupFrame.setLocationRelativeTo(null);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel warningLabel = new JLabel("WARNING: Username Required!");
+        warningLabel.setForeground(Color.RED);
+        warningLabel.setFont(new Font("Dialog", Font.BOLD, 16));
+        warningLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel infoLabel = new JLabel("<html>The XtremeHardcoreMan plugin requires your exact in-game username.<br>"
+                + "Without this, the plugin cannot track your account properly.<br><br>"
+                + "Please enter your exact in-game username:</html>");
+        infoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JTextField usernameField = new JTextField(20);
+        usernameField.setMaximumSize(new Dimension(300, 30));
+        usernameField.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Pre-fill with current player name if available
+        if (client.getLocalPlayer() != null) {
+            usernameField.setText(client.getLocalPlayer().getName());
+        }
+
+        JButton saveButton = new JButton("Save Username");
+        saveButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        saveButton.addActionListener(e -> {
+            String username = usernameField.getText();
+            if (username != null && !username.trim().isEmpty()) {
+                config.username(username);
+                usernamePopupFrame.dispose();
+                usernamePopupFrame = null;
+            } else {
+                JOptionPane.showMessageDialog(usernamePopupFrame,
+                        "Please enter your username!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        panel.add(Box.createVerticalStrut(10));
+        panel.add(warningLabel);
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(infoLabel);
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(usernameField);
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(saveButton);
+
+        usernamePopupFrame.add(panel);
+        usernamePopupFrame.setVisible(true);
+    }
+
+    /**
+     * Close the username popup if it exists
+     */
+    private void closeUsernamePopup() {
+        if (usernamePopupFrame != null) {
+            usernamePopupFrame.dispose();
+            usernamePopupFrame = null;
+        }
+    }
+
+    /**
+     * Check if username is empty or blank
+     */
+    private boolean isUsernameEmpty() {
+        String username = config.username();
+        return username == null || username.trim().isEmpty();
     }
 
     private void loadIcons()
@@ -211,12 +317,33 @@ public class XHCMPlugin extends Plugin
         String configUsername = config.username();
         String playerUsername = client.getLocalPlayer().getName();
 
-        // If no username is set in config, the plugin is enabled for all accounts
+        // If no username is set in config, show the popup but don't enable tracking
         if (configUsername == null || configUsername.trim().isEmpty()) {
-            return true;
+            checkAndDisplayUsernamePopup();
+            return false;
         }
 
-        // Otherwise, the plugin is only enabled if the username matches
+        // Plugin is only enabled if the username matches
+        return Text.standardize(configUsername).equalsIgnoreCase(Text.standardize(playerUsername));
+    }
+
+    /**
+     * Verifies that the current player matches the configured username
+     * @return true if player matches, false otherwise
+     */
+    private boolean isConfiguredPlayer() {
+        if (client.getLocalPlayer() == null) {
+            return false;
+        }
+
+        String configUsername = config.username();
+        String playerUsername = client.getLocalPlayer().getName();
+
+        // Username must be set and match the current player
+        if (configUsername == null || configUsername.trim().isEmpty()) {
+            return false;
+        }
+
         return Text.standardize(configUsername).equalsIgnoreCase(Text.standardize(playerUsername));
     }
 
@@ -228,6 +355,9 @@ public class XHCMPlugin extends Plugin
             clientThread.invokeLater(() -> {
                 log.info("Game logged in, loading icons...");
                 loadIcons();
+
+                // Check if we need to show the username popup
+                checkAndDisplayUsernamePopup();
 
                 if (firstRun) {
                     log.info("First run actions...");
@@ -245,6 +375,9 @@ public class XHCMPlugin extends Plugin
     @Subscribe
     public void onGameTick(GameTick tick)
     {
+        // Log current game state on every tick
+       // log.info("Current Game State: {}", client.getGameState());
+
         // Check if plugin should be enabled for this player
         if (!isPluginEnabled()) {
             return;
@@ -265,7 +398,7 @@ public class XHCMPlugin extends Plugin
                 int currentHours = config.timeAliveHours();
                 config.timeAliveHours(currentHours + 1);
                 tickCounter = 0;
-                log.debug("Time alive incremented to {} hours", config.timeAliveHours());
+                //log.debug("Time alive incremented to {} hours", config.timeAliveHours());
             }
         }
     }
@@ -405,40 +538,49 @@ public class XHCMPlugin extends Plugin
 
     private void checkForDeath()
     {
-        // Check if plugin should be enabled for this player
-        if (!isPluginEnabled()) {
+        // Only check for death if:
+        // 1. Plugin is enabled for this player (username matches)
+        // 2. Client is logged in
+        // 3. Not disconnecting
+        if (!isConfiguredPlayer() ||
+                client.getGameState() != GameState.LOGGED_IN ||
+                client.getGameState() == GameState.CONNECTION_LOST ||
+                client.getGameState() == GameState.HOPPING)
+        {
             return;
         }
 
-        if (client.getGameState() == GameState.LOGGED_IN)
+        int currentHP = client.getBoostedSkillLevel(Skill.HITPOINTS);
+        boolean currentlyDead = currentHP <= 0;
+
+        // If player is dead and this hasn't been saved as permanent yet
+        if (currentlyDead && !config.permanentDeath())
         {
-            int currentHP = client.getBoostedSkillLevel(Skill.HITPOINTS);
-            boolean currentlyDead = currentHP <= 0;
-            // If player is dead and this hasn't been saved as permanent yet
-            if (currentlyDead && !config.permanentDeath())
-            {
-                log.info("Player is permanently dead!");
-                // Set permanent death in config
-                config.permanentDeath(true);
+            log.info("Player is permanently dead!");
 
-                // Notify the player
-                ChatMessageBuilder message = new ChatMessageBuilder()
-                        .append(Color.RED, "Xtreme Hardcore mode: You have permanently died. No second chances!");
-                client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", message.build(), null);
+            // Double check that username is configured and matches
+            if (!isConfiguredPlayer()) {
+                log.warn("Death detected but username doesn't match configured username, ignoring death");
+                return;
+            }
 
-                // Update the chatbox to show the death icon
-                clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
-            }
-            else if (!currentlyDead && config.permanentDeath())
-            {
-                log.info("Player is permanently dead, cannot reset to alive.");
+            // Set permanent death in config
+            config.permanentDeath(true);
 
-                // Update the chatbox to show the death icon
-                clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
-            }
-            else if (!currentlyDead && !config.permanentDeath())
-            {
-            }
+            // Notify the player
+            ChatMessageBuilder message = new ChatMessageBuilder()
+                    .append(Color.RED, "Xtreme Hardcore mode: You have permanently died. No second chances!");
+            client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", message.build(), null);
+
+            // Update the chatbox to show the death icon
+            clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
+        }
+        else if (!currentlyDead && config.permanentDeath())
+        {
+            log.info("Player is permanently dead, cannot reset to alive.");
+
+            // Update the chatbox to show the death icon
+            clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
         }
     }
 }

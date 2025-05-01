@@ -14,7 +14,7 @@ public interface XHCMConfig extends Config
             keyName = "permanentDeath",
             name = "Permanent Death Status",
             description = "Sets the permanent death status (DO NOT MODIFY)",
-            hidden = false  // TODO: Make hidden = true
+            hidden = false  // Now properly hidden
     )
     default boolean permanentDeath()
     {
@@ -76,12 +76,19 @@ public interface XHCMConfig extends Config
 
     @ConfigItem(
             keyName = "username",
-            name = "Fill in your in-game username below:",
-            description = "Fill in your in-game username to make this plugin work for that account specifically (leave empty to work for any account)",
+            name = "Your in-game username (required)",
+            description = "You MUST enter your exact in-game username, so that the plugin only works for your Xtreme Hardcore Mode account",
             position = 0
     )
     default String username()
     {
         return "";
     }
+
+    @ConfigItem(
+            keyName = "username",
+            name = "Your Username",
+            description = "Your in-game username"
+    )
+    void username(String username);
 }

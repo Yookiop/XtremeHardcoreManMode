@@ -3,6 +3,7 @@ package com.XHCM;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.FontMetrics;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -10,6 +11,8 @@ import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayPriority;
 import net.runelite.client.ui.overlay.components.LineComponent;
+import net.runelite.client.ui.overlay.components.TitleComponent;
+import net.runelite.client.util.Text;
 
 public class XHCMOverlay extends OverlayPanel
 {
@@ -32,7 +35,58 @@ public class XHCMOverlay extends OverlayPanel
     @Override
     public Dimension render(Graphics2D graphics)
     {
-        if (!config.showTimeAlive() || !plugin.isPluginEnabled())
+        if (!plugin.isPluginEnabled())
+        {
+            // If username is not configured, show a warning
+            if (config.username() == null || config.username().trim().isEmpty()) {
+                panelComponent.getChildren().clear();
+
+                // Add warning title
+                panelComponent.getChildren().add(TitleComponent.builder()
+                        .text("Username Required!")
+                        .color(Color.RED)
+                        .build());
+
+                // Add warning message
+                panelComponent.getChildren().add(LineComponent.builder()
+                        .left("Set username in settings")
+                        .leftColor(Color.RED)
+                        .build());
+
+                return super.render(graphics);
+            }
+
+            // If username is set but doesn't match current player
+            if (client.getLocalPlayer() != null &&
+                    !Text.standardize(config.username()).equalsIgnoreCase(
+                            Text.standardize(client.getLocalPlayer().getName()))) {
+
+                panelComponent.getChildren().clear();
+
+                // Add warning title
+                panelComponent.getChildren().add(TitleComponent.builder()
+                        .text("Username Mismatch")
+                        .color(Color.ORANGE)
+                        .build());
+
+                // Add warning message
+                panelComponent.getChildren().add(LineComponent.builder()
+                        .left("Config: " + config.username())
+                        .leftColor(Color.WHITE)
+                        .build());
+
+                panelComponent.getChildren().add(LineComponent.builder()
+                        .left("Current: " + client.getLocalPlayer().getName())
+                        .leftColor(Color.WHITE)
+                        .build());
+
+                return super.render(graphics);
+            }
+
+            return null;
+        }
+
+        if (!config.showTimeAlive())
         {
             return null;
         }
@@ -42,7 +96,7 @@ public class XHCMOverlay extends OverlayPanel
 
         if (plugin.isPlayerDead())
         {
-            // Show "DEAD" message when player is dead
+
             panelComponent.getChildren().add(LineComponent.builder()
                     .left("Status:")
                     .right("DEAD")
@@ -71,6 +125,7 @@ public class XHCMOverlay extends OverlayPanel
                     .right(hourText)
                     .leftColor(Color.GREEN)
                     .build());
+
         }
 
         return super.render(graphics);
