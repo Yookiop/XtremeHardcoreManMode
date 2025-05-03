@@ -14,7 +14,7 @@ public interface XHCMConfig extends Config
             keyName = "permanentDeath",
             name = "Permanent Death Status",
             description = "Sets the permanent death status (DO NOT MODIFY)",
-            hidden = false  // Now properly hidden
+            hidden = true
     )
     default boolean permanentDeath()
     {
@@ -31,7 +31,8 @@ public interface XHCMConfig extends Config
     @ConfigItem(
             keyName = "showTimeAlive",
             name = "Show time alive counter",
-            description = "Displays a counter showing how long your character has been alive in hours"
+            description = "Displays a counter showing how long your character has been alive in hours",
+            hidden = true
     )
     default boolean showTimeAlive()
     {
