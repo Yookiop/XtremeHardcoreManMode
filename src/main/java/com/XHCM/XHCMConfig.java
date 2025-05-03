@@ -102,26 +102,6 @@ public interface XHCMConfig extends Config
         return false;
     }
 
-    @ConfigItem(
-            keyName = "notifyMusicTrackUnlock",
-            name = "Notify on Music Track Unlock",
-            description = "Send a notification when 'Rest in Peace' music track gets unlocked"
-    )
-    default boolean notifyMusicTrackUnlock()
-    {
-        return true;
-    }
-
-    @ConfigItem(
-            keyName = "musicTrackUnlocked",
-            name = "'Rest in Peace' Track Unlocked",
-            description = "Tracks whether the 'Rest in Peace' music track has been unlocked",
-            hidden = true
-    )
-    default boolean musicTrackUnlocked()
-    {
-        return false;
-    }
 
     @ConfigItem(
             keyName = "musicTrackUnlocked",

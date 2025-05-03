@@ -27,7 +27,7 @@ public class MusicTrackChecker {
     private static final int REST_IN_PEACE_TRACK_ID = 87;
 
     // Check every 100 game ticks (60 seconds)
-    private static final int CHECK_INTERVAL = 100;
+    private static final int CHECK_INTERVAL = 10;
 
     // VarPlayer IDs for music tracks (from DeVco's VarbitViewer)
     private static final int MUSIC_TRACKS_UNLOCKED_1 = 20;
@@ -153,7 +153,7 @@ public class MusicTrackChecker {
                 log.warn("Track ID {} is outside of the expected range", trackId);
                 return false;
         }
-
+        log.info("test");
         // Check if the specific bit is set
         return (musicVarbitValue & (1 << bitPosition)) != 0;
     }
@@ -161,9 +161,6 @@ public class MusicTrackChecker {
     @Subscribe
     public void onGameTick(GameTick tick) {
         // Skip if music track checking is disabled in config
-        if (!config.checkMusicTrack()) {
-            return;
-        }
 
         if (client.getGameState() != GameState.LOGGED_IN) {
             return;
@@ -172,38 +169,15 @@ public class MusicTrackChecker {
         tickCounter++;
 
         // Check every CHECK_INTERVAL ticks
-        if (tickCounter % CHECK_INTERVAL == 0) {
+        if (tickCounter >= CHECK_INTERVAL) {
+            log.info("test");
             clientThread.invoke(() -> {
                 boolean isUnlocked = isMusicTrackUnlocked(REST_IN_PEACE_TRACK_ID);
-
+                log.info("isUnlocked: " + isUnlocked);
                 // Track unlock state change
                 boolean stateChanged = isUnlocked != previousUnlockState;
                 previousUnlockState = isUnlocked;
 
-                // Update config value for track unlock status
-                if (config.musicTrackUnlocked() != isUnlocked) {
-                    config.musicTrackUnlocked(isUnlocked);
-                }
-
-                // Only send notification if state changed and notifications are enabled
-                if (stateChanged && config.notifyMusicTrackUnlock()) {
-                    String message = isUnlocked ?
-                            "Rest in Peace music track is now unlocked!" :
-                            "Rest in Peace music track is no longer unlocked.";
-
-                    // Log the result
-                    log.debug(message);
-
-                    // Send a chat message to the player
-                    final ChatMessageBuilder chatMessageBuilder = new ChatMessageBuilder()
-                            .append(ChatColorType.HIGHLIGHT)
-                            .append(message);
-
-                    chatMessageManager.queue(QueuedMessage.builder()
-                            .type(net.runelite.api.ChatMessageType.CONSOLE)
-                            .runeLiteFormattedMessage(chatMessageBuilder.build())
-                            .build());
-                }
             });
         }
     }
