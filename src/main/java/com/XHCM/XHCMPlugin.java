@@ -480,21 +480,6 @@ public class XHCMPlugin extends Plugin
         updateChatbox(); // this stops flickering when typing
     }
 
-    @Subscribe
-    public void onMenuOptionClicked(MenuOptionClicked event)
-    {
-        // Check if plugin should be enabled for this player
-        if (!isPluginEnabled()) {
-            return;
-        }
-
-        if (event.getMenuOption().equalsIgnoreCase("Enter Death's Domain"))
-        {
-            event.consume();
-            client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Xtreme Hardcore: You may not enter Death's Office!", null);
-        }
-    }
-
     private void updateChatbox()
     {
         // Check if plugin should be enabled for this player
