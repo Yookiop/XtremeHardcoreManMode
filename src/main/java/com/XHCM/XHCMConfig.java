@@ -92,13 +92,14 @@ public interface XHCMConfig extends Config
     )
     void username(String username);
 
-    @ConfigItem(
-            keyName = "checkMusicTrack",
-            name = "Check 'Rest in Peace' music track",
-            description = "Periodically check if the 'Rest in Peace' music track is unlocked to verify 1st death"
-    )
-    default boolean checkMusicTrack()
-    {
-        return true;
-    }
+//    @ConfigItem(
+//            keyName = "checkMusicTrack",
+//            name = "Check 'Rest in Peace' music track",
+//            description = "Periodically check if the 'Rest in Peace' music track from Death's Office is unlocked to verify 1st death",
+//            hidden = false
+//    )
+//    default boolean checkMusicTrack()
+//    {
+//        return true;
+//    }
 }

@@ -52,8 +52,8 @@ public class XHCMPlugin extends Plugin
     @Inject
     private ConfigManager configManager;
 
-    @Inject
-    private MusicTrackChecker musicTrackChecker;
+    //@Inject
+    //private MusicTrackChecker musicTrackChecker;
 
     @Inject
     private XHCMConfig config;
@@ -90,7 +90,6 @@ public class XHCMPlugin extends Plugin
 
         // Register the overlay
         overlayManager.add(overlay);
-
 
 
         if (client.getGameState() == GameState.LOGGED_IN)
@@ -353,6 +352,23 @@ public class XHCMPlugin extends Plugin
         return Text.standardize(configUsername).equalsIgnoreCase(Text.standardize(playerUsername));
     }
 
+    public void updateDeathState() {
+        if (!config.permanentDeath()) {
+            log.info("Setting permanent death via updateDeathState");
+
+            // Set permanent death in config
+            config.permanentDeath(true);
+
+            // Send a notification to the player
+            ChatMessageBuilder message = new ChatMessageBuilder()
+                    .append(Color.RED, "Xtreme Hardcore mode: You have permanently died. No second chances!");
+            client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", message.build(), null);
+
+            // Update the chatbox to show the death icon
+            clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
+        }
+    }
+
     @Subscribe
     public void onGameStateChanged(GameStateChanged gameStateChanged)
     {
@@ -398,12 +414,13 @@ public class XHCMPlugin extends Plugin
         // Increment tick counter if player is alive
         if (!isPlayerDead() && client.getGameState() == GameState.LOGGED_IN) {
             tickCounter++;
-            tickCounterMusicTrack++;
+            //tickCounterMusicTrack++;
 
-            if (tickCounterMusicTrack >= 10) {
-                musicTrackChecker.initialize();
-                tickCounterMusicTrack = 0;
-            }
+            //if (tickCounterMusicTrack >= 10) {
+            //    musicTrackChecker.initialize();
+            //    tickCounterMusicTrack = 0;
+            //}
+
             // If we've reached an hour's worth of ticks
             if (tickCounter >= TICKS_PER_HOUR) {
                 int currentHours = config.timeAliveHours();
@@ -561,16 +578,8 @@ public class XHCMPlugin extends Plugin
                 return;
             }
 
-            // Set permanent death in config
-            config.permanentDeath(true);
-
-            // Notify the player
-            ChatMessageBuilder message = new ChatMessageBuilder()
-                    .append(Color.RED, "Xtreme Hardcore mode: You have permanently died. No second chances!");
-            client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", message.build(), null);
-
-            // Update the chatbox to show the death icon
-            clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
+            // Use shared method to set permanent death
+            updateDeathState();
         }
         else if (!currentlyDead && config.permanentDeath())
         {
