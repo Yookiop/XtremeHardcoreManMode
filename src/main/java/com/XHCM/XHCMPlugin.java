@@ -25,6 +25,13 @@ import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.components.PanelComponent;
 
+import net.runelite.api.Client;
+import net.runelite.api.Varbits;
+import net.runelite.api.events.GameTick;
+import net.runelite.client.eventbus.Subscribe;
+import javax.inject.Inject;
+
+
 import javax.inject.Inject;
 import javax.swing.*;
 import java.awt.*;
@@ -66,6 +73,9 @@ public class XHCMPlugin extends Plugin
 
     @Inject
     private ClientToolbar clientToolbar;
+
+
+
 
     private HashMap<XHCMIcons, Integer> iconIds = new HashMap<>();
     private boolean firstRun = true;
@@ -372,6 +382,7 @@ public class XHCMPlugin extends Plugin
         }
     }
 
+
     @Subscribe
     public void onGameTick(GameTick tick)
     {
@@ -399,6 +410,23 @@ public class XHCMPlugin extends Plugin
                 config.timeAliveHours(currentHours + 1);
                 tickCounter = 0;
                 //log.debug("Time alive incremented to {} hours", config.timeAliveHours());
+            }
+
+            if (tickCounter % 100 == 0)
+            {
+                client.runScript(252, 3494);
+                boolean unlocked = client.getIntStack()[0] == 1;
+                log.info("Resultaat van runScript: " + client.getIntStack()[0]);
+                //boolean unlocked1 = client.getVarbitValue(restInPeaceVarbitId) == 1;
+                if (unlocked)
+                {
+                    // Voeg hier de gewenste actie toe, bijvoorbeeld een melding of log
+                    log.info("'Rest in Peace' is ontgrendeld!");
+                }
+                else
+                {
+                    log.info("'Rest in Peace' is nog niet ontgrendeld.");
+                }
             }
         }
     }
