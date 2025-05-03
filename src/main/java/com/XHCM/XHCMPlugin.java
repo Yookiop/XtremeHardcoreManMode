@@ -77,6 +77,7 @@ public class XHCMPlugin extends Plugin
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     private XHCMIcons currentIcon = XHCMIcons.ALIVE;
     private int tickCounter = 0;
+    private int tickCounterMusicTrack = 0;
     private static final int TICKS_PER_HOUR = 6000; // 6000 ticks = 1 hour (100 ticks/min * 60 min)
     private boolean usernamePopupShown = false;
     private NavigationButton navButton;
@@ -397,7 +398,12 @@ public class XHCMPlugin extends Plugin
         // Increment tick counter if player is alive
         if (!isPlayerDead() && client.getGameState() == GameState.LOGGED_IN) {
             tickCounter++;
+            tickCounterMusicTrack++;
 
+            if (tickCounterMusicTrack >= 10) {
+                musicTrackChecker.initialize();
+                tickCounterMusicTrack = 0;
+            }
             // If we've reached an hour's worth of ticks
             if (tickCounter >= TICKS_PER_HOUR) {
                 int currentHours = config.timeAliveHours();

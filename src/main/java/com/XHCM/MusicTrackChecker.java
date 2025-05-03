@@ -26,7 +26,7 @@ public class MusicTrackChecker {
     // The track ID for "Rest in Peace" is 87
     private static final int REST_IN_PEACE_TRACK_ID = 87;
 
-    // Check every 100 game ticks (60 seconds)
+    // Check every 10 game ticks (6 seconds)
     private static final int CHECK_INTERVAL = 10;
 
     // VarPlayer IDs for music tracks (from DeVco's VarbitViewer)
@@ -65,6 +65,24 @@ public class MusicTrackChecker {
 
     private int tickCounter = 0;
     private boolean previousUnlockState = false;
+    private boolean isInitialized = false;
+
+    /**
+     * Initialize the checker
+     */
+    public void initialize() {
+        log.info("MusicTrackChecker initialized");
+        isInitialized = true;
+        tickCounter = 0;
+
+        // Check music track status on startup if enabled
+        if (config.checkMusicTrack()) {
+            clientThread.invoke(() -> {
+                log.info("Initial music track check");
+                checkMusicTrack();
+            });
+        }
+    }
 
     /**
      * Checks if a music track is unlocked based on the CS2 script implementation
@@ -76,7 +94,7 @@ public class MusicTrackChecker {
     public boolean isMusicTrackUnlocked(int trackId) {
         // Based on how music tracks are stored in the game
         // Each track uses a bit in the music unlock varbits
-
+        log.info("public boolean isMusicTrackUnlocked");
         // Calculate which varbit contains this track
         int varbitIndex = trackId / 32;
 
@@ -153,32 +171,48 @@ public class MusicTrackChecker {
                 log.warn("Track ID {} is outside of the expected range", trackId);
                 return false;
         }
-        log.info("test");
+
         // Check if the specific bit is set
         return (musicVarbitValue & (1 << bitPosition)) != 0;
     }
 
-    @Subscribe
-    public void onGameTick(GameTick tick) {
-        // Skip if music track checking is disabled in config
+    /**
+     * Check the music track and update state
+     */
+    private void checkMusicTrack() {
+        boolean isUnlocked = isMusicTrackUnlocked(REST_IN_PEACE_TRACK_ID);
+        log.info("'Rest in Peace' track unlocked: {}", isUnlocked);
 
-        if (client.getGameState() != GameState.LOGGED_IN) {
-            return;
+        // Track unlock state change
+        boolean stateChanged = isUnlocked != previousUnlockState;
+        if (stateChanged) {
+            log.info("Music track unlock state changed from {} to {}", previousUnlockState, isUnlocked);
         }
 
-        tickCounter++;
-
-        // Check every CHECK_INTERVAL ticks
-        if (tickCounter >= CHECK_INTERVAL) {
-            log.info("test");
-            clientThread.invoke(() -> {
-                boolean isUnlocked = isMusicTrackUnlocked(REST_IN_PEACE_TRACK_ID);
-                log.info("isUnlocked: " + isUnlocked);
-                // Track unlock state change
-                boolean stateChanged = isUnlocked != previousUnlockState;
-                previousUnlockState = isUnlocked;
-
-            });
-        }
+        previousUnlockState = isUnlocked;
     }
+
+    // @Subscribe
+//    public void onGameTick(GameTick tick) {
+//        // Skip if not logged in
+//        if (client.getGameState() != GameState.LOGGED_IN) {
+//            return;
+//        }
+//
+//        // Skip if music track checking is disabled in config
+//        if (!config.checkMusicTrack()) {
+//            return;
+//        }
+//
+//        // Initialize if needed
+//        if (!isInitialized) {
+//            initialize();
+//        }
+//
+//        tickCounter++;
+//
+//
+//            clientThread.invoke(this::checkMusicTrack);
+//
+//    }
 }
