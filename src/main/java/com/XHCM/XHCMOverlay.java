@@ -43,13 +43,13 @@ public class XHCMOverlay extends OverlayPanel
 
                 // Add warning title
                 panelComponent.getChildren().add(TitleComponent.builder()
-                        .text("Username Required!")
+                        .text("Username required!")
                         .color(Color.RED)
                         .build());
 
                 // Add warning message
                 panelComponent.getChildren().add(LineComponent.builder()
-                        .left("Set username in settings")
+                        .left("Set username in plugin settings")
                         .leftColor(Color.RED)
                         .build());
 
@@ -96,7 +96,6 @@ public class XHCMOverlay extends OverlayPanel
 
         if (plugin.isPlayerDead())
         {
-
             panelComponent.getChildren().add(LineComponent.builder()
                     .left("Status:")
                     .right("DEAD")
@@ -127,7 +126,6 @@ public class XHCMOverlay extends OverlayPanel
                     .build());
 
         }
-
         return super.render(graphics);
     }
 }

@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.ScriptCallbackEvent;
 import net.runelite.api.events.BeforeRender;
 import net.runelite.api.widgets.Widget;
@@ -23,15 +22,7 @@ import net.runelite.client.util.Text;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
-import net.runelite.client.ui.overlay.components.PanelComponent;
-
 import net.runelite.api.Client;
-import net.runelite.api.Varbits;
-import net.runelite.api.events.GameTick;
-import net.runelite.client.eventbus.Subscribe;
-import javax.inject.Inject;
-
-
 import javax.inject.Inject;
 import javax.swing.*;
 import java.awt.*;
@@ -59,9 +50,6 @@ public class XHCMPlugin extends Plugin
     @Inject
     private ConfigManager configManager;
 
-    //@Inject
-    //private MusicTrackChecker musicTrackChecker;
-
     @Inject
     private XHCMConfig config;
 
@@ -77,9 +65,6 @@ public class XHCMPlugin extends Plugin
     @Inject
     private ClientToolbar clientToolbar;
 
-
-
-
     private HashMap<XHCMIcons, Integer> iconIds = new HashMap<>();
     private boolean firstRun = true;
     private BufferedImage cachedAliveIcon = null;
@@ -89,9 +74,6 @@ public class XHCMPlugin extends Plugin
     private int tickCounter = 0;
     private int tickCounterMusicTrack = 0;
     private static final int TICKS_PER_HOUR = 6000; // 6000 ticks = 1 hour (100 ticks/min * 60 min)
-    private boolean usernamePopupShown = false;
-    private NavigationButton navButton;
-    private JFrame usernamePopupFrame;
 
     @Override
     protected void startUp() throws Exception
@@ -108,9 +90,6 @@ public class XHCMPlugin extends Plugin
             clientThread.invokeLater(() -> {
                 log.info("Client is logged in, loading icons...");
                 loadIcons();
-
-                // Show username popup if needed
-                checkAndDisplayUsernamePopup();
             });
         }
 
@@ -131,7 +110,6 @@ public class XHCMPlugin extends Plugin
         overlayManager.remove(overlay);
         executorService.shutdown();
         iconIds.clear();
-        closeUsernamePopup();
         clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
     }
 
@@ -145,97 +123,6 @@ public class XHCMPlugin extends Plugin
         return iconIds.containsKey(XHCMIcons.ALIVE) && iconIds.containsKey(XHCMIcons.DEAD);
     }
 
-    /**
-     * Check if username is set and display popup if not
-     */
-    private void checkAndDisplayUsernamePopup() {
-        if (isUsernameEmpty() && !usernamePopupShown && client.getGameState() == GameState.LOGGED_IN) {
-            // Schedule on client thread to avoid Swing threading issues
-            SwingUtilities.invokeLater(this::showUsernamePopup);
-        }
-    }
-
-    /**
-     * Show a popup window asking for username
-     */
-    private void showUsernamePopup() {
-        if (usernamePopupFrame != null) {
-            return;
-        }
-
-        usernamePopupShown = true;
-        usernamePopupFrame = new JFrame("XHCM Plugin - Username Required");
-        usernamePopupFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        usernamePopupFrame.setSize(400, 250);
-        usernamePopupFrame.setLocationRelativeTo(null);
-
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-        JLabel warningLabel = new JLabel("WARNING: Username Required!");
-        warningLabel.setForeground(Color.RED);
-        warningLabel.setFont(new Font("Dialog", Font.BOLD, 16));
-        warningLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel infoLabel = new JLabel("<html>The XtremeHardcoreMan plugin requires your exact in-game username.<br>"
-                + "Without this, the plugin cannot track your account properly.<br><br>"
-                + "Please enter your exact in-game username:</html>");
-        infoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JTextField usernameField = new JTextField(20);
-        usernameField.setMaximumSize(new Dimension(300, 30));
-        usernameField.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        // Pre-fill with current player name if available
-        if (client.getLocalPlayer() != null) {
-            usernameField.setText(client.getLocalPlayer().getName());
-        }
-
-        JButton saveButton = new JButton("Save Username");
-        saveButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        saveButton.addActionListener(e -> {
-            String username = usernameField.getText();
-            if (username != null && !username.trim().isEmpty()) {
-                config.username(username);
-                usernamePopupFrame.dispose();
-                usernamePopupFrame = null;
-            } else {
-                JOptionPane.showMessageDialog(usernamePopupFrame,
-                        "Please enter your username!", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        panel.add(Box.createVerticalStrut(10));
-        panel.add(warningLabel);
-        panel.add(Box.createVerticalStrut(20));
-        panel.add(infoLabel);
-        panel.add(Box.createVerticalStrut(20));
-        panel.add(usernameField);
-        panel.add(Box.createVerticalStrut(20));
-        panel.add(saveButton);
-
-        usernamePopupFrame.add(panel);
-        usernamePopupFrame.setVisible(true);
-    }
-
-    /**
-     * Close the username popup if it exists
-     */
-    private void closeUsernamePopup() {
-        if (usernamePopupFrame != null) {
-            usernamePopupFrame.dispose();
-            usernamePopupFrame = null;
-        }
-    }
-
-    /**
-     * Check if username is empty or blank
-     */
-    private boolean isUsernameEmpty() {
-        String username = config.username();
-        return username == null || username.trim().isEmpty();
-    }
 
     private void loadIcons()
     {
@@ -328,15 +215,8 @@ public class XHCMPlugin extends Plugin
         if (client.getLocalPlayer() == null) {
             return false;
         }
-
         String configUsername = config.username();
         String playerUsername = client.getLocalPlayer().getName();
-
-        // If no username is set in config, show the popup but don't enable tracking
-        if (configUsername == null || configUsername.trim().isEmpty()) {
-            checkAndDisplayUsernamePopup();
-            return false;
-        }
 
         // Plugin is only enabled if the username matches
         return Text.standardize(configUsername).equalsIgnoreCase(Text.standardize(playerUsername));
@@ -388,9 +268,6 @@ public class XHCMPlugin extends Plugin
                 log.info("Game logged in, loading icons...");
                 loadIcons();
 
-                // Check if we need to show the username popup
-                checkAndDisplayUsernamePopup();
-
                 if (firstRun) {
                     log.info("First run actions...");
                     firstRun = false;
@@ -437,24 +314,6 @@ public class XHCMPlugin extends Plugin
                 int currentHours = config.timeAliveHours();
                 config.timeAliveHours(currentHours + 1);
                 tickCounter = 0;
-                //log.debug("Time alive incremented to {} hours", config.timeAliveHours());
-            }
-
-            if (tickCounter % 100 == 0)
-            {
-                client.runScript(252, 3494);
-                boolean unlocked = client.getIntStack()[0] == 1;
-                log.info("Resultaat van runScript: " + client.getIntStack()[0]);
-                //boolean unlocked1 = client.getVarbitValue(restInPeaceVarbitId) == 1;
-                if (unlocked)
-                {
-                    // Voeg hier de gewenste actie toe, bijvoorbeeld een melding of log
-                    log.info("'Rest in Peace' is ontgrendeld!");
-                }
-                else
-                {
-                    log.info("'Rest in Peace' is nog niet ontgrendeld.");
-                }
             }
         }
     }
@@ -598,7 +457,7 @@ public class XHCMPlugin extends Plugin
         // If player is dead and this hasn't been saved as permanent yet
         if (currentlyDead && !config.permanentDeath())
         {
-            log.info("Player is permanently dead!");
+            log.info("Player is now permanently dead!");
 
             // Double check that username is configured and matches
             if (!isConfiguredPlayer()) {
