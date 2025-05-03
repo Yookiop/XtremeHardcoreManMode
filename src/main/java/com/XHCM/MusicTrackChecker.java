@@ -3,7 +3,6 @@ package com.XHCM;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
-import net.runelite.api.VarPlayer;
 import net.runelite.api.events.GameTick;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatColorType;
@@ -13,6 +12,7 @@ import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.eventbus.Subscribe;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.awt.Color;
 
 /**
@@ -20,6 +20,7 @@ import java.awt.Color;
  * Implementation based on CS2 script: music_isunlocked
  */
 @Slf4j
+@Singleton
 public class MusicTrackChecker {
 
     // The track ID for "Rest in Peace" is 87
@@ -27,6 +28,28 @@ public class MusicTrackChecker {
 
     // Check every 100 game ticks (60 seconds)
     private static final int CHECK_INTERVAL = 100;
+
+    // VarPlayer IDs for music tracks (from DeVco's VarbitViewer)
+    private static final int MUSIC_TRACKS_UNLOCKED_1 = 20;
+    private static final int MUSIC_TRACKS_UNLOCKED_2 = 21;
+    private static final int MUSIC_TRACKS_UNLOCKED_3 = 22;
+    private static final int MUSIC_TRACKS_UNLOCKED_4 = 23;
+    private static final int MUSIC_TRACKS_UNLOCKED_5 = 24;
+    private static final int MUSIC_TRACKS_UNLOCKED_6 = 25;
+    private static final int MUSIC_TRACKS_UNLOCKED_7 = 298;
+    private static final int MUSIC_TRACKS_UNLOCKED_8 = 311;
+    private static final int MUSIC_TRACKS_UNLOCKED_9 = 346;
+    private static final int MUSIC_TRACKS_UNLOCKED_10 = 414;
+    private static final int MUSIC_TRACKS_UNLOCKED_11 = 464;
+    private static final int MUSIC_TRACKS_UNLOCKED_12 = 598;
+    private static final int MUSIC_TRACKS_UNLOCKED_13 = 662;
+    private static final int MUSIC_TRACKS_UNLOCKED_14 = 721;
+    private static final int MUSIC_TRACKS_UNLOCKED_15 = 906;
+    private static final int MUSIC_TRACKS_UNLOCKED_16 = 1009;
+    private static final int MUSIC_TRACKS_UNLOCKED_17 = 1338;
+    private static final int MUSIC_TRACKS_UNLOCKED_18 = 1681;
+    private static final int MUSIC_TRACKS_UNLOCKED_19 = 2065;
+    private static final int MUSIC_TRACKS_UNLOCKED_20 = 2237;
 
     @Inject
     private Client client;
@@ -37,7 +60,11 @@ public class MusicTrackChecker {
     @Inject
     private ChatMessageManager chatMessageManager;
 
+    @Inject
+    private XHCMConfig config;
+
     private int tickCounter = 0;
+    private boolean previousUnlockState = false;
 
     /**
      * Checks if a music track is unlocked based on the CS2 script implementation
@@ -61,49 +88,70 @@ public class MusicTrackChecker {
 
         // The music unlocks are stored in VarPlayer 20 through 40
         // These correspond to the ranges of music tracks
-        if (varbitIndex == 0) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_1);
-        } else if (varbitIndex == 1) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_2);
-        } else if (varbitIndex == 2) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_3);
-        } else if (varbitIndex == 3) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_4);
-        } else if (varbitIndex == 4) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_5);
-        } else if (varbitIndex == 5) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_6);
-        } else if (varbitIndex == 6) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_7);
-        } else if (varbitIndex == 7) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_8);
-        } else if (varbitIndex == 8) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_9);
-        } else if (varbitIndex == 9) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_10);
-        } else if (varbitIndex == 10) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_11);
-        } else if (varbitIndex == 11) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_12);
-        } else if (varbitIndex == 12) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_13);
-        } else if (varbitIndex == 13) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_14);
-        } else if (varbitIndex == 14) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_15);
-        } else if (varbitIndex == 15) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_16);
-        } else if (varbitIndex == 16) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_17);
-        } else if (varbitIndex == 17) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_18);
-        } else if (varbitIndex == 18) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_19);
-        } else if (varbitIndex == 19) {
-            musicVarbitValue = client.getVarpValue(VarPlayer.MUSIC_TRACKS_UNLOCKED_20);
-        } else {
-            log.warn("Track ID {} is outside of the expected range", trackId);
-            return false;
+        switch (varbitIndex) {
+            case 0:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_1);
+                break;
+            case 1:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_2);
+                break;
+            case 2:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_3);
+                break;
+            case 3:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_4);
+                break;
+            case 4:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_5);
+                break;
+            case 5:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_6);
+                break;
+            case 6:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_7);
+                break;
+            case 7:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_8);
+                break;
+            case 8:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_9);
+                break;
+            case 9:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_10);
+                break;
+            case 10:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_11);
+                break;
+            case 11:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_12);
+                break;
+            case 12:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_13);
+                break;
+            case 13:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_14);
+                break;
+            case 14:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_15);
+                break;
+            case 15:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_16);
+                break;
+            case 16:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_17);
+                break;
+            case 17:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_18);
+                break;
+            case 18:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_19);
+                break;
+            case 19:
+                musicVarbitValue = client.getVarpValue(MUSIC_TRACKS_UNLOCKED_20);
+                break;
+            default:
+                log.warn("Track ID {} is outside of the expected range", trackId);
+                return false;
         }
 
         // Check if the specific bit is set
@@ -112,6 +160,11 @@ public class MusicTrackChecker {
 
     @Subscribe
     public void onGameTick(GameTick tick) {
+        // Skip if music track checking is disabled in config
+        if (!config.checkMusicTrack()) {
+            return;
+        }
+
         if (client.getGameState() != GameState.LOGGED_IN) {
             return;
         }
@@ -123,22 +176,34 @@ public class MusicTrackChecker {
             clientThread.invoke(() -> {
                 boolean isUnlocked = isMusicTrackUnlocked(REST_IN_PEACE_TRACK_ID);
 
-                String message = isUnlocked ?
-                        "Rest in Peace music track is unlocked!" :
-                        "Rest in Peace music track is not unlocked yet.";
+                // Track unlock state change
+                boolean stateChanged = isUnlocked != previousUnlockState;
+                previousUnlockState = isUnlocked;
 
-                // Log the result
-                log.debug(message);
+                // Update config value for track unlock status
+                if (config.musicTrackUnlocked() != isUnlocked) {
+                    config.musicTrackUnlocked(isUnlocked);
+                }
 
-                // Send a chat message to the player
-                final ChatMessageBuilder chatMessageBuilder = new ChatMessageBuilder()
-                        .append(ChatColorType.HIGHLIGHT)
-                        .append(message);
+                // Only send notification if state changed and notifications are enabled
+                if (stateChanged && config.notifyMusicTrackUnlock()) {
+                    String message = isUnlocked ?
+                            "Rest in Peace music track is now unlocked!" :
+                            "Rest in Peace music track is no longer unlocked.";
 
-                chatMessageManager.queue(QueuedMessage.builder()
-                        .type(net.runelite.api.ChatMessageType.CONSOLE)
-                        .runeLiteFormattedMessage(chatMessageBuilder.build())
-                        .build());
+                    // Log the result
+                    log.debug(message);
+
+                    // Send a chat message to the player
+                    final ChatMessageBuilder chatMessageBuilder = new ChatMessageBuilder()
+                            .append(ChatColorType.HIGHLIGHT)
+                            .append(message);
+
+                    chatMessageManager.queue(QueuedMessage.builder()
+                            .type(net.runelite.api.ChatMessageType.CONSOLE)
+                            .runeLiteFormattedMessage(chatMessageBuilder.build())
+                            .build());
+                }
             });
         }
     }
