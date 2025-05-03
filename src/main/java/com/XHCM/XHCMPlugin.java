@@ -53,6 +53,9 @@ public class XHCMPlugin extends Plugin
     private ConfigManager configManager;
 
     @Inject
+    private MusicTrackChecker musicTrackChecker;
+
+    @Inject
     private XHCMConfig config;
 
     @Inject
@@ -87,6 +90,10 @@ public class XHCMPlugin extends Plugin
         // Register the overlay
         overlayManager.add(overlay);
 
+        // Register music track checker
+        injector.injectMembers(musicTrackChecker);
+        client.getEventBus().register(musicTrackChecker);
+
         if (client.getGameState() == GameState.LOGGED_IN)
         {
             // Add a slight delay to ensure client is fully loaded
@@ -114,6 +121,7 @@ public class XHCMPlugin extends Plugin
     {
         log.info("XHCM plugin shutting down...");
         overlayManager.remove(overlay);
+        client.getEventBus().unregister(musicTrackChecker);
         executorService.shutdown();
         iconIds.clear();
         closeUsernamePopup();
@@ -479,6 +487,7 @@ public class XHCMPlugin extends Plugin
 
         updateChatbox(); // this stops flickering when typing
     }
+
 
     private void updateChatbox()
     {

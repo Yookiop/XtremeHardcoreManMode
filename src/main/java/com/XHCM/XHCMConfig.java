@@ -91,4 +91,42 @@ public interface XHCMConfig extends Config
             description = "Your in-game username"
     )
     void username(String username);
+
+    @ConfigItem(
+            keyName = "checkMusicTrack",
+            name = "Check 'Rest in Peace' Music Track",
+            description = "Periodically check if the 'Rest in Peace' music track is unlocked"
+    )
+    default boolean checkMusicTrack()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+            keyName = "notifyMusicTrackUnlock",
+            name = "Notify on Music Track Unlock",
+            description = "Send a notification when 'Rest in Peace' music track gets unlocked"
+    )
+    default boolean notifyMusicTrackUnlock()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+            keyName = "musicTrackUnlocked",
+            name = "'Rest in Peace' Track Unlocked",
+            description = "Tracks whether the 'Rest in Peace' music track has been unlocked",
+            hidden = true
+    )
+    default boolean musicTrackUnlocked()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+            keyName = "musicTrackUnlocked",
+            name = "'Rest in Peace' Track Unlocked",
+            description = "Tracks whether the 'Rest in Peace' music track has been unlocked"
+    )
+    void musicTrackUnlocked(boolean unlocked);
 }
