@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.ScriptCallbackEvent;
 import net.runelite.api.events.BeforeRender;
 import net.runelite.api.widgets.Widget;
@@ -17,11 +16,15 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.menus.MenuManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import net.runelite.api.events.ChatMessage;
-
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.api.Client;
 import javax.inject.Inject;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
@@ -53,17 +56,33 @@ public class XHCMPlugin extends Plugin
     @Inject
     private ClientThread clientThread;
 
+    @Inject
+    private OverlayManager overlayManager;
+
+    @Inject
+    private XHCMOverlay overlay;
+
+    @Inject
+    private ClientToolbar clientToolbar;
+
     private HashMap<XHCMIcons, Integer> iconIds = new HashMap<>();
     private boolean firstRun = true;
     private BufferedImage cachedAliveIcon = null;
     private BufferedImage cachedDeadIcon = null;
     private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
     private XHCMIcons currentIcon = XHCMIcons.ALIVE;
+    private int tickCounter = 0;
+    private int tickCounterMusicTrack = 0;
+    private static final int TICKS_PER_HOUR = 6000; // 6000 ticks = 1 hour (100 ticks/min * 60 min)
 
     @Override
     protected void startUp() throws Exception
     {
         log.info("XHCM plugin starting up...");
+
+        // Register the overlay
+        overlayManager.add(overlay);
+
 
         if (client.getGameState() == GameState.LOGGED_IN)
         {
@@ -88,6 +107,7 @@ public class XHCMPlugin extends Plugin
     protected void shutDown() throws Exception
     {
         log.info("XHCM plugin shutting down...");
+        overlayManager.remove(overlay);
         executorService.shutdown();
         iconIds.clear();
         clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
@@ -102,6 +122,7 @@ public class XHCMPlugin extends Plugin
     private boolean areIconsLoaded() {
         return iconIds.containsKey(XHCMIcons.ALIVE) && iconIds.containsKey(XHCMIcons.DEAD);
     }
+
 
     private void loadIcons()
     {
@@ -185,6 +206,59 @@ public class XHCMPlugin extends Plugin
         return config.permanentDeath();
     }
 
+    /**
+     * Checks if the plugin should be enabled for the current player
+     * @return true if the plugin should be enabled, false otherwise
+     */
+    public boolean isPluginEnabled()
+    {
+        if (client.getLocalPlayer() == null) {
+            return false;
+        }
+        String configUsername = config.username();
+        String playerUsername = client.getLocalPlayer().getName();
+
+        // Plugin is only enabled if the username matches
+        return Text.standardize(configUsername).equalsIgnoreCase(Text.standardize(playerUsername));
+    }
+
+    /**
+     * Verifies that the current player matches the configured username
+     * @return true if player matches, false otherwise
+     */
+    private boolean isConfiguredPlayer() {
+        if (client.getLocalPlayer() == null) {
+            return false;
+        }
+
+        String configUsername = config.username();
+        String playerUsername = client.getLocalPlayer().getName();
+
+        // Username must be set and match the current player
+        if (configUsername == null || configUsername.trim().isEmpty()) {
+            return false;
+        }
+
+        return Text.standardize(configUsername).equalsIgnoreCase(Text.standardize(playerUsername));
+    }
+
+    public void updateDeathState() {
+        if (!config.permanentDeath()) {
+            log.info("Setting permanent death via updateDeathState");
+
+            // Set permanent death in config
+            config.permanentDeath(true);
+
+            // Send a notification to the player
+            ChatMessageBuilder message = new ChatMessageBuilder()
+                    .append(Color.RED, "Xtreme Hardcore mode: You have permanently died. No second chances!");
+            client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", message.build(), null);
+
+            // Update the chatbox to show the death icon
+            clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
+        }
+    }
+
     @Subscribe
     public void onGameStateChanged(GameStateChanged gameStateChanged)
     {
@@ -198,25 +272,60 @@ public class XHCMPlugin extends Plugin
                     log.info("First run actions...");
                     firstRun = false;
                 }
+
+                // Initialize or update the last time updated if needed
+                if (config.lastTimeUpdated() == 0) {
+                    config.lastTimeUpdated(System.currentTimeMillis());
+                }
             });
         }
     }
 
+
     @Subscribe
     public void onGameTick(GameTick tick)
     {
-        checkForDeath();
+        // Log current game state on every tick
+       // log.info("Current Game State: {}", client.getGameState());
 
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+        checkForDeath();
         // If icons aren't loaded yet, try loading them
         if (!areIconsLoaded() && client.getGameState() == GameState.LOGGED_IN) {
             log.info("Icons not loaded yet, trying to load at game tick");
             loadIcons();
+        }
+
+        // Increment tick counter if player is alive
+        if (!isPlayerDead() && client.getGameState() == GameState.LOGGED_IN) {
+            tickCounter++;
+            //tickCounterMusicTrack++;
+
+            //if (tickCounterMusicTrack >= 10) {
+            //    musicTrackChecker.initialize();
+            //    tickCounterMusicTrack = 0;
+            //}
+
+            // If we've reached an hour's worth of ticks
+            if (tickCounter >= TICKS_PER_HOUR) {
+                int currentHours = config.timeAliveHours();
+                config.timeAliveHours(currentHours + 1);
+                tickCounter = 0;
+            }
         }
     }
 
     @Subscribe
     public void onChatMessage(ChatMessage event)
     {
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+
         if (event.getType() != ChatMessageType.PUBLICCHAT &&
                 event.getType() != ChatMessageType.PRIVATECHAT &&
                 event.getType() != ChatMessageType.MODCHAT &&
@@ -262,6 +371,11 @@ public class XHCMPlugin extends Plugin
     @Subscribe
     public void onScriptCallbackEvent(ScriptCallbackEvent event)
     {
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+
         if (!event.getEventName().equals("setChatboxInput"))
         {
             return;
@@ -273,21 +387,22 @@ public class XHCMPlugin extends Plugin
     @Subscribe
     public void onBeforeRender(BeforeRender event)
     {
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+
         updateChatbox(); // this stops flickering when typing
     }
 
-    @Subscribe
-    public void onMenuOptionClicked(MenuOptionClicked event)
-    {
-        if (event.getMenuOption().equalsIgnoreCase("Enter Death's Domain"))
-        {
-            event.consume();
-            client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Xtreme Hardcore: You may not enter Death's Office!", null);
-        }
-    }
 
     private void updateChatbox()
     {
+        // Check if plugin should be enabled for this player
+        if (!isPluginEnabled()) {
+            return;
+        }
+
         Widget chatboxTypedText = client.getWidget(WidgetInfo.CHATBOX_INPUT);
 
         if (chatboxTypedText == null || chatboxTypedText.isHidden())
@@ -324,41 +439,41 @@ public class XHCMPlugin extends Plugin
 
     private void checkForDeath()
     {
-        if (client.getGameState() == GameState.LOGGED_IN)
+        // Only check for death if:
+        // 1. Plugin is enabled for this player (username matches)
+        // 2. Client is logged in
+        // 3. Not disconnecting
+        if (!isConfiguredPlayer() ||
+                client.getGameState() != GameState.LOGGED_IN ||
+                client.getGameState() == GameState.CONNECTION_LOST ||
+                client.getGameState() == GameState.HOPPING)
         {
-            int currentHP = client.getBoostedSkillLevel(Skill.HITPOINTS);
-            boolean currentlyDead = currentHP <= 0;
+            return;
+        }
 
-            log.info("currentHP: {}", client.getBoostedSkillLevel(Skill.HITPOINTS));
-            log.info("PermanentDeath: {}", config.permanentDeath());
+        int currentHP = client.getBoostedSkillLevel(Skill.HITPOINTS);
+        boolean currentlyDead = currentHP <= 0;
 
-            // If player is dead and this hasn't been saved as permanent yet
-            if (currentlyDead && !config.permanentDeath())
-            {
-                log.info("Player is permanently dead!");
-                // Set permanent death in config
-                config.permanentDeath(true);
+        // If player is dead and this hasn't been saved as permanent yet
+        if (currentlyDead && !config.permanentDeath())
+        {
+            log.info("Player is now permanently dead!");
 
-                // Notify the player
-                ChatMessageBuilder message = new ChatMessageBuilder()
-                        .append(Color.RED, "Xtreme Hardcore mode: You have permanently died. No second chances!");
-                client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", message.build(), null);
-
-                // Update the chatbox to show the death icon
-                clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
+            // Double check that username is configured and matches
+            if (!isConfiguredPlayer()) {
+                log.warn("Death detected but username doesn't match configured username, ignoring death");
+                return;
             }
-            else if (!currentlyDead && config.permanentDeath())
-            {
-                log.info("Player is permanently dead, cannot reset to alive.");
 
-                // Update the chatbox to show the death icon
-                clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
-            }
-            else if (!currentlyDead && !config.permanentDeath())
-            {
-                log.info("Player is alive.");
-                log.info("currentHP: {}", currentHP);
-            }
+            // Use shared method to set permanent death
+            updateDeathState();
+        }
+        else if (!currentlyDead && config.permanentDeath())
+        {
+            log.info("Player is permanently dead, cannot reset to alive.");
+
+            // Update the chatbox to show the death icon
+            clientThread.invoke(() -> client.runScript(ScriptID.CHAT_PROMPT_INIT));
         }
     }
 }
